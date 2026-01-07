@@ -52,12 +52,12 @@ const SearchableDropdown = ({
             <button
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-full flex items-center justify-between gap-2 bg-black/30 border border-brand-border text-brand-primary p-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-primary/50 transition-all text-left"
+                className="w-full flex items-center justify-between gap-2 bg-black/30 border border-brand-border text-brand-primary p-3.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-primary/50 transition-all text-left active:scale-[0.98]"
             >
-                <span className={!selectedOption ? "text-brand-secondary" : "text-brand-primary"}>
+                <span className={`truncate ${!selectedOption ? "text-brand-secondary opacity-60" : "text-brand-primary font-medium"}`}>
                     {displayLabel}
                 </span>
-                <ChevronDown className={`text-brand-secondary transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} size={18} />
+                <ChevronDown className={`text-brand-secondary shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} size={18} />
             </button>
 
             {isOpen && (
@@ -98,7 +98,7 @@ const SearchableDropdown = ({
                                         key={index}
                                         type="button"
                                         onClick={() => handleSelect(option)}
-                                        className={`w-full flex items-center justify-between p-3 text-sm text-left transition-colors ${isSelected ? 'bg-brand-primary/10 text-brand-primary' : 'text-brand-secondary hover:bg-white/5 hover:text-white'
+                                        className={`w-full flex items-center justify-between p-4 text-sm text-left transition-colors border-b border-white/5 last:border-0 ${isSelected ? 'bg-brand-primary/10 text-brand-primary' : 'text-brand-secondary hover:bg-white/5 hover:text-white'
                                             }`}
                                     >
                                         <span>{label}</span>

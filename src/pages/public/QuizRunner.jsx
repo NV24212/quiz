@@ -42,7 +42,7 @@ const QuizHeader = ({ progress, viewMode, setViewMode }) => (
 const QuestionItem = ({ q, index, total, answers, handleAnswer, isSinglePage, submitting, handleNext }) => {
     const currentAnswer = answers[q.id] || '';
     return (
-        <div className="bg-black/20 border border-brand-border p-10 rounded-2xl shadow-card w-full flex flex-col backdrop-blur-md animate-fade-in-up">
+        <div className="bg-black/20 border border-brand-border p-5 md:p-10 rounded-2xl shadow-card w-full flex flex-col backdrop-blur-md animate-fade-in-up">
             <div className="flex justify-between items-center mb-6">
                 <span className="text-brand-secondary text-[10px] font-black uppercase tracking-[0.2em] opacity-40">
                     Q{index + 1} / {total}
@@ -52,7 +52,35 @@ const QuestionItem = ({ q, index, total, answers, handleAnswer, isSinglePage, su
             <h2 className="text-2xl font-bold mb-8 text-white leading-tight">{q.text}</h2>
 
             <div className="space-y-3 flex-1">
-                {['multiple_choice', 'true_false'].includes(q.type) ? (
+                {q.type === 'matching' ? (
+                    <div className="space-y-4">
+                        {(q.options || []).map((opt, oIdx) => {
+                            const [prompt, correctAnswer] = opt.includes(':') ? opt.split(':') : [opt, ''];
+                            const allChoices = Array.from(new Set((q.options || []).map(o => o.includes(':') ? o.split(':')[1] : o)));
+                            const currentMatches = answers[q.id] || {};
+                            const userChoice = currentMatches[prompt] || '';
+
+                            return (
+                                <div key={oIdx} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 bg-black/10 rounded-xl border border-brand-border/10">
+                                    <span className="text-sm font-medium text-white px-2 py-1 bg-white/5 rounded-lg flex-1">{prompt}</span>
+                                    <select
+                                        value={userChoice}
+                                        onChange={(e) => {
+                                            const newMatches = { ...currentMatches, [prompt]: e.target.value };
+                                            handleAnswer(q.id, newMatches);
+                                        }}
+                                        className="w-full sm:w-48 bg-black/40 border border-brand-border text-brand-primary p-2 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-primary/50 text-xs"
+                                    >
+                                        <option value="">[ Choose ]</option>
+                                        {allChoices.map((choice, cIdx) => (
+                                            <option key={cIdx} value={choice}>{choice}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            );
+                        })}
+                    </div>
+                ) : ['multiple_choice', 'true_false'].includes(q.type) ? (
                     (q.options && q.options.length > 0 ? q.options : (q.type === 'true_false' ? ['صواب', 'خطأ'] : [])).map((option, idx) => (
                         <button
                             key={idx}
@@ -170,7 +198,24 @@ const QuizRunner = () => {
         try {
             let calculatedScore = 0;
             questions.forEach(q => {
-                if (answers[q.id] === q.correct_answer) {
+                const userVal = answers[q.id];
+                const correctVal = q.correct_answer;
+
+                if (q.type === 'matching') {
+                    // For matching, correct_answer is strings in options "Prompt:Answer"
+                    // UserVal is { Prompt: Choice, ... }
+                    const expectedMatches = {};
+                    (q.options || []).forEach(opt => {
+                        const [p, a] = opt.includes(':') ? opt.split(':') : [opt, ''];
+                        expectedMatches[p] = a;
+                    });
+
+                    const userMatches = typeof userVal === 'object' ? userVal : {};
+                    const isAllCorrect = Object.keys(expectedMatches).every(p => userMatches[p] === expectedMatches[p]);
+                    if (isAllCorrect && Object.keys(expectedMatches).length > 0) {
+                        calculatedScore++;
+                    }
+                } else if (userVal === correctVal) {
                     calculatedScore++;
                 }
             });
@@ -294,9 +339,20 @@ const QuizRunner = () => {
                         <h2 className="text-xs font-black text-brand-primary px-4 uppercase tracking-[0.3em] opacity-60">Results</h2>
                         {questions.map((q, idx) => {
                             const userAnswer = answers[q.id];
-                            const isCorrect = userAnswer === q.correct_answer;
+                            let isCorrect = userAnswer === q.correct_answer;
+
+                            if (q.type === 'matching') {
+                                const expected = {};
+                                (q.options || []).forEach(opt => {
+                                    const [p, a] = opt.includes(':') ? opt.split(':') : [opt, ''];
+                                    expected[p] = a;
+                                });
+                                const userMatches = typeof userAnswer === 'object' ? userAnswer : {};
+                                isCorrect = Object.keys(expected).length > 0 && Object.keys(expected).every(p => userMatches[p] === expected[p]);
+                            }
+
                             return (
-                                <div key={idx} className={`bg-black/20 border p-10 rounded-2xl backdrop-blur-md shadow-card ${isCorrect ? 'border-green-500/10' : 'border-red-500/10'}`}>
+                                <div key={idx} className={`bg-black/20 border p-6 md:p-10 rounded-2xl backdrop-blur-md shadow-card ${isCorrect ? 'border-green-500/10' : 'border-red-500/10'}`}>
                                     <div className="flex items-center justify-between mb-6">
                                         <span className="text-brand-secondary text-[10px] font-black uppercase tracking-[0.2em] opacity-40">Q{idx + 1} / {questions.length}</span>
                                         {isCorrect ? (
@@ -305,19 +361,39 @@ const QuizRunner = () => {
                                             <span className="text-[10px] font-black text-red-400 bg-red-400/10 px-4 py-1.5 rounded-full flex items-center gap-2 uppercase tracking-widest"><XCircle size={12} /> Incorrect</span>
                                         )}
                                     </div>
-                                    <p className="text-2xl font-bold text-white mb-8 leading-tight">{q.text}</p>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div className="p-5 bg-black/30 rounded-xl border border-white/5">
-                                            <span className="text-brand-secondary block text-[10px] uppercase font-black tracking-widest opacity-40 mb-3">Your Answer</span>
-                                            <span className={`text-lg font-bold ${isCorrect ? 'text-green-300' : 'text-red-300'}`}>{userAnswer || 'Not Answered'}</span>
+                                    <p className="text-xl md:text-2xl font-bold text-white mb-8 leading-tight">{q.text}</p>
+
+                                    {q.type === 'matching' ? (
+                                        <div className="space-y-2 bg-black/30 p-4 rounded-xl border border-white/5">
+                                            {(q.options || []).map((opt, i) => {
+                                                const [p, a] = opt.includes(':') ? opt.split(':') : [opt, ''];
+                                                const uA = (userAnswer || {})[p];
+                                                const matchOk = uA === a;
+                                                return (
+                                                    <div key={i} className="flex justify-between items-center text-xs border-b border-white/5 pb-2 last:border-0 last:pb-0">
+                                                        <span className="text-brand-secondary">{p}</span>
+                                                        <div className="flex items-center gap-2 font-bold">
+                                                            <span className={matchOk ? "text-green-400" : "text-red-400"}>{uA || '---'}</span>
+                                                            {!matchOk && <span className="text-brand-secondary opacity-40">({a})</span>}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
-                                        {!isCorrect && (
-                                            <div className="p-5 bg-green-500/5 rounded-xl border border-green-500/10">
-                                                <span className="text-brand-secondary block text-[10px] uppercase font-black tracking-widest opacity-40 mb-3">Correct Answer</span>
-                                                <span className="text-lg font-bold text-green-400">{q.correct_answer}</span>
+                                    ) : (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div className="p-5 bg-black/30 rounded-xl border border-white/5">
+                                                <span className="text-brand-secondary block text-[10px] uppercase font-black tracking-widest opacity-40 mb-3">Your Answer</span>
+                                                <span className={`text-lg font-bold ${isCorrect ? 'text-green-300' : 'text-red-300'}`}>{userAnswer || 'Not Answered'}</span>
                                             </div>
-                                        )}
-                                    </div>
+                                            {!isCorrect && (
+                                                <div className="p-5 bg-green-500/5 rounded-xl border border-green-500/10">
+                                                    <span className="text-brand-secondary block text-[10px] uppercase font-black tracking-widest opacity-40 mb-3">Correct Answer</span>
+                                                    <span className="text-lg font-bold text-green-400">{q.correct_answer}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })}

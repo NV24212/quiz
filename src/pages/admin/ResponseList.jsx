@@ -103,7 +103,8 @@ const ResponseList = () => {
             {error && <div className="text-red-400 mb-4">{error}</div>}
 
             <div className="bg-black/20 border border-brand-border rounded-2xl overflow-hidden backdrop-blur-md">
-                <div className="overflow-x-auto">
+                {/* Desktop Table */}
+                <div className="overflow-x-auto hidden md:block">
                     <table className="w-full text-left">
                         <thead>
                             <tr className="bg-white/5 text-brand-secondary text-xs uppercase tracking-wider">
@@ -125,7 +126,7 @@ const ResponseList = () => {
                                 filteredResponses.map(response => {
                                     const totalQuestions = response.answers ? Object.keys(response.answers).length : 0;
                                     return (
-                                        <tr key={response.id} className="hover:bg-white/5 transition-colors group">
+                                        <tr key={response.id} className="hover:bg-white/5 transition-colors group border-b border-brand-border/10">
                                             <td className="p-4">
                                                 <div className="font-bold text-brand-primary group-hover:text-white transition-colors">{response.respondent_name}</div>
                                                 <div className="text-[10px] text-brand-secondary font-mono mt-1 opacity-50">#{response.id.slice(0, 8)}</div>
@@ -162,6 +163,53 @@ const ResponseList = () => {
                         </tbody>
                     </table>
                 </div>
+
+                {/* Mobile Cards */}
+                <div className="md:hidden divide-y divide-brand-border/30">
+                    {filteredResponses.length === 0 ? (
+                        <div className="p-12 text-center text-brand-secondary text-sm">
+                            No responses found matching your filters.
+                        </div>
+                    ) : (
+                        filteredResponses.map(response => {
+                            const totalQuestions = response.answers ? Object.keys(response.answers).length : 0;
+                            return (
+                                <div key={response.id} className="p-4 space-y-4">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <div className="font-bold text-brand-primary text-base">{response.respondent_name}</div>
+                                            <div className="text-[10px] text-brand-secondary opacity-50">#{response.id.slice(0, 8)}</div>
+                                        </div>
+                                        <button
+                                            onClick={() => fetchResponseDetails(response)}
+                                            className="bg-brand-primary/10 text-brand-primary px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5"
+                                        >
+                                            <Eye size={12} /> Review
+                                        </button>
+                                    </div>
+                                    <div className="flex justify-between items-end">
+                                        <div>
+                                            <div className="text-[10px] text-brand-secondary uppercase font-black tracking-widest opacity-40 mb-1">Quiz</div>
+                                            <div className="text-sm text-white font-medium">{response.quizzes?.title || 'Unknown Quiz'}</div>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-[10px] text-brand-secondary uppercase font-black tracking-widest opacity-40 mb-1">Score</div>
+                                            <div className="font-mono text-lg text-brand-primary">
+                                                {response.score !== null ? response.score : '0'}
+                                                <span className="text-xs opacity-50 mx-0.5">/</span>
+                                                <span className="text-sm opacity-80">{totalQuestions}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="pt-3 border-t border-white/5 flex justify-between items-center text-[10px] text-brand-secondary">
+                                        <span>Date: {new Date(response.submitted_at).toLocaleDateString()}</span>
+                                        <span>Time: {new Date(response.submitted_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                    </div>
+                                </div>
+                            );
+                        })
+                    )}
+                </div>
             </div>
 
             <Modal
@@ -194,7 +242,17 @@ const ResponseList = () => {
                         <div className="space-y-4 max-h-[60vh] overflow-y-auto px-1 custom-scrollbar">
                             {quizQuestions.map((q, idx) => {
                                 const userAnswer = selectedResponse?.answers[q.id];
-                                const isCorrect = userAnswer === q.correct_answer;
+                                let isCorrect = userAnswer === q.correct_answer;
+
+                                if (q.type === 'matching') {
+                                    const expected = {};
+                                    (q.options || []).forEach(opt => {
+                                        const [p, a] = opt.includes(':') ? opt.split(':') : [opt, ''];
+                                        expected[p] = a;
+                                    });
+                                    const userMatches = typeof userAnswer === 'object' ? userAnswer : {};
+                                    isCorrect = Object.keys(expected).length > 0 && Object.keys(expected).every(p => userMatches[p] === expected[p]);
+                                }
 
                                 return (
                                     <div key={q.id} className={`p-4 rounded-xl border ${isCorrect ? 'border-green-500/20 bg-green-500/5' : 'border-red-500/20 bg-red-500/5'}`}>
@@ -210,18 +268,38 @@ const ResponseList = () => {
                                             )}
                                         </div>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                                            <div className="p-3 bg-black/20 rounded-lg border border-white/5">
-                                                <span className="text-brand-secondary block mb-1 uppercase tracking-tighter text-[9px]">Respondent Answer</span>
-                                                <span className={isCorrect ? "text-green-400 font-bold" : "text-red-400 font-bold"}>
-                                                    {userAnswer || <span className="italic opacity-30 font-normal underline">No Answer</span>}
-                                                </span>
+                                        {q.type === 'matching' ? (
+                                            <div className="space-y-1 bg-black/20 p-3 rounded-lg border border-white/5">
+                                                <span className="text-brand-secondary block mb-2 uppercase tracking-tighter text-[9px]">Matching Results</span>
+                                                {(q.options || []).map((opt, i) => {
+                                                    const [p, a] = opt.includes(':') ? opt.split(':') : [opt, ''];
+                                                    const uA = (userAnswer || {})[p];
+                                                    const matchOk = uA === a;
+                                                    return (
+                                                        <div key={i} className="flex justify-between items-center text-[10px] border-b border-white/5 pb-1 last:border-0 last:pb-0">
+                                                            <span className="text-brand-secondary">{p}</span>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className={matchOk ? "text-green-400" : "text-red-400"}>{uA || '---'}</span>
+                                                                {!matchOk && <span className="text-brand-secondary opacity-40">({a})</span>}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
-                                            <div className="p-3 bg-black/20 rounded-lg border border-white/5">
-                                                <span className="text-brand-secondary block mb-1 uppercase tracking-tighter text-[9px]">Correct Answer</span>
-                                                <span className="text-green-400 font-bold">{q.correct_answer}</span>
+                                        ) : (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                                                <div className="p-3 bg-black/20 rounded-lg border border-white/5">
+                                                    <span className="text-brand-secondary block mb-1 uppercase tracking-tighter text-[9px]">Respondent Answer</span>
+                                                    <span className={isCorrect ? "text-green-400 font-bold" : "text-red-400 font-bold"}>
+                                                        {userAnswer || <span className="italic opacity-30 font-normal underline">No Answer</span>}
+                                                    </span>
+                                                </div>
+                                                <div className="p-3 bg-black/20 rounded-lg border border-white/5">
+                                                    <span className="text-brand-secondary block mb-1 uppercase tracking-tighter text-[9px]">Correct Answer</span>
+                                                    <span className="text-green-400 font-bold">{q.correct_answer}</span>
+                                                </div>
                                             </div>
-                                        </div>
+                                        )}
                                     </div>
                                 );
                             })}

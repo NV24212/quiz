@@ -122,6 +122,17 @@ const AIPasteModal = ({ isOpen, onClose, onImport }) => {
                                     </div>
                                 )}
 
+                                {q.type === 'matching' && (
+                                    <div className="space-y-2">
+                                        {(q.options || []).map((pair, i) => (
+                                            <div key={i} className="flex justify-between items-center text-[11px] p-2 rounded-lg border border-white/5 bg-white/5">
+                                                <span>{pair.split(':')[0]}</span>
+                                                <span className="text-green-400 font-bold">{pair.split(':')[1]}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
                                 {q.type === 'text' && (
                                     <div className="text-[11px] p-2 rounded-lg border border-brand-primary/20 bg-brand-primary/5 text-brand-primary italic">
                                         Answer: {q.correct_answer || 'Manual check needed'}

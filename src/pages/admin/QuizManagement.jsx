@@ -40,6 +40,7 @@ const QuizManagement = () => {
     const questionTypeOptions = [
         { value: 'multiple_choice', label: 'Multiple Choice' },
         { value: 'true_false', label: 'True / False' },
+        { value: 'matching', label: 'Matching (Connect)' },
         { value: 'text', label: 'Text Input' }
     ];
 
@@ -329,7 +330,21 @@ const QuizManagement = () => {
                 </div>
             )}
 
-            <Modal isOpen={isModalOpen} onClose={closeModal} title={editingQuiz ? 'Edit Quiz' : 'Create New Quiz'}>
+            <Modal
+                isOpen={isModalOpen}
+                onClose={closeModal}
+                title={editingQuiz ? 'Edit Quiz' : 'Create New Quiz'}
+                headerActions={
+                    <button
+                        type="button"
+                        onClick={handleFormSubmit}
+                        className="bg-brand-primary text-brand-background px-4 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wider hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-2"
+                        disabled={isSubmitting}
+                    >
+                        {isSubmitting ? <Loader2 className="animate-spin h-3 w-3" /> : (editingQuiz ? 'Save' : 'Create')}
+                    </button>
+                }
+            >
                 <form onSubmit={handleFormSubmit} className="space-y-6">
                     <div ref={topRef}></div>
 
@@ -393,36 +408,36 @@ const QuizManagement = () => {
                     <div className="border-t border-brand-border my-6"></div>
 
                     <div>
-                        <div className="flex justify-between items-center mb-4 sticky top-0 bg-brand-background/95 backdrop-blur z-10 py-2">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6 bg-brand-background/50 backdrop-blur-sm p-4 rounded-xl border border-brand-border/30">
                             <h3 className="text-xl font-bold text-brand-primary">Questions</h3>
-                            <div className="flex gap-2">
+                            <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                                 <button
                                     type="button"
                                     onClick={scrollToTop}
-                                    className="text-xs bg-brand-border/10 hover:bg-brand-border/20 text-brand-secondary py-2 px-3 rounded-lg flex items-center gap-2 transition-colors font-bold"
+                                    className="flex-1 sm:flex-none text-[10px] bg-brand-border/10 hover:bg-brand-border/20 text-brand-secondary py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-colors font-bold uppercase tracking-wider"
                                 >
-                                    <ArrowUp size={14} /> Top
+                                    <ArrowUp size={12} /> Top
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setIsAIModalOpen(true)}
-                                    className="text-xs bg-brand-primary/10 text-brand-primary border border-brand-primary/20 py-2 px-3 rounded-lg flex items-center gap-2 transition-colors font-bold hover:bg-brand-primary/20"
+                                    className="flex-1 sm:flex-none text-[10px] bg-brand-primary/10 text-brand-primary border border-brand-primary/20 py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-colors font-bold hover:bg-brand-primary/20 uppercase tracking-wider"
                                 >
-                                    <Sparkles size={14} /> AI Import
+                                    <Sparkles size={12} /> AI Import
                                 </button>
                                 <button
                                     type="button"
                                     onClick={addQuestion}
-                                    className="text-xs bg-brand-primary text-brand-background py-2 px-3 rounded-lg flex items-center gap-2 transition-colors font-bold"
+                                    className="flex-[2] sm:flex-none text-[10px] bg-brand-primary text-brand-background py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-colors font-bold uppercase tracking-wider"
                                 >
-                                    <PlusCircle size={14} /> New Question
+                                    <PlusCircle size={12} /> New Question
                                 </button>
                             </div>
                         </div>
 
-                        <div className="space-y-6">
+                        <div className="space-y-4 md:space-y-6">
                             {formData.questions.map((q, qIndex) => (
-                                <div key={qIndex} className="bg-black/20 border border-brand-border p-5 rounded-2xl relative group">
+                                <div key={qIndex} className="bg-black/20 border border-brand-border p-4 md:p-5 rounded-2xl relative group">
                                     <button
                                         type="button"
                                         onClick={() => removeQuestion(qIndex)}
@@ -494,6 +509,59 @@ const QuizManagement = () => {
                                             </div>
                                         )}
 
+                                        {q.type === 'matching' && (
+                                            <div className="bg-black/10 p-4 rounded-xl border border-brand-border/30">
+                                                <label className="block text-xs font-bold text-brand-secondary uppercase mb-3 text-[10px]">Pairs (Prompt & Choice)</label>
+                                                <div className="space-y-3">
+                                                    {(q.options || []).map((opt, oIndex) => {
+                                                        const [prompt, answer] = opt.includes(':') ? opt.split(':') : [opt, ''];
+                                                        return (
+                                                            <div key={oIndex} className="flex flex-col md:flex-row gap-2 items-start md:items-center bg-black/20 p-3 rounded-lg border border-white/5 relative">
+                                                                <div className="flex-1 w-full space-y-2">
+                                                                    <input
+                                                                        type="text"
+                                                                        value={prompt}
+                                                                        onChange={(e) => {
+                                                                            const newPrompt = e.target.value;
+                                                                            updateOption(qIndex, oIndex, `${newPrompt}:${answer}`);
+                                                                        }}
+                                                                        className="w-full bg-black/30 border border-brand-border p-2.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-primary/50 text-sm text-brand-primary"
+                                                                        placeholder="Prompt (e.g. Moon)"
+                                                                    />
+                                                                    <input
+                                                                        type="text"
+                                                                        value={answer}
+                                                                        onChange={(e) => {
+                                                                            const newAnswer = e.target.value;
+                                                                            updateOption(qIndex, oIndex, `${prompt}:${newAnswer}`);
+                                                                        }}
+                                                                        className="w-full bg-black/30 border border-brand-border p-2.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-primary/50 text-sm text-green-400 font-bold"
+                                                                        placeholder="Correct Answer"
+                                                                    />
+                                                                </div>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => removeOption(qIndex, oIndex)}
+                                                                    className="absolute top-2 right-2 md:relative md:top-0 md:right-0 text-brand-secondary hover:text-red-500 p-2"
+                                                                >
+                                                                    <X size={16} />
+                                                                </button>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const newOptions = [...(q.options || []), " : "];
+                                                            updateQuestion(qIndex, 'options', newOptions);
+                                                        }}
+                                                        className="text-xs text-brand-primary hover:underline flex items-center gap-1 mt-2 font-bold"
+                                                    >
+                                                        <Plus size={14} /> Add Pair
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
                                         {q.type === 'multiple_choice' && (
                                             <div className="bg-black/10 p-4 rounded-xl border border-brand-border/30">
                                                 <label className="block text-xs font-bold text-brand-secondary uppercase mb-3 text-[10px]">Options (Select the correct one)</label>
@@ -522,7 +590,7 @@ const QuizManagement = () => {
                                                                     }
                                                                 }}
                                                                 required
-                                                                className={`flex-1 bg-black/30 border p-2 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-primary/50 text-sm ${q.correct_answer === opt ? 'border-brand-primary/50 text-brand-primary font-bold' : 'border-brand-border text-brand-primary'
+                                                                className={`flex-1 bg-black/30 border p-2.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-primary/50 text-sm ${q.correct_answer === opt ? 'border-brand-primary/50 text-brand-primary font-bold' : 'border-brand-border text-brand-primary'
                                                                     }`}
                                                                 placeholder={`Option ${oIndex + 1}`}
                                                             />
@@ -556,26 +624,27 @@ const QuizManagement = () => {
                         </div>
                     </div>
 
-                    <div className="flex justify-end gap-3 pt-4 border-t border-brand-border">
+                    {/* Secondary bottom actions (non-sticky) */}
+                    <div className="flex flex-col sm:flex-row justify-end gap-3 pt-8 border-t border-brand-border/30 mt-10">
                         <button
                             type="button"
                             onClick={closeModal}
-                            className="bg-brand-border/10 hover:bg-brand-border/20 text-brand-primary font-bold py-2.5 px-6 rounded-xl transition-colors"
+                            className="w-full sm:w-auto bg-brand-border/10 hover:bg-brand-border/20 text-brand-primary font-bold py-3 px-6 rounded-xl transition-colors text-sm uppercase tracking-widest"
                         >
-                            Cancel
+                            Close Editor
                         </button>
                         <button
                             type="submit"
-                            className="bg-brand-primary hover:opacity-90 text-brand-background font-bold py-2.5 px-8 rounded-xl transition-colors flex items-center justify-center min-w-[140px]"
+                            className="w-full sm:w-auto bg-brand-primary hover:opacity-90 text-brand-background font-bold py-3 px-10 rounded-xl transition-colors flex items-center justify-center min-w-[160px] text-sm uppercase tracking-widest shadow-glow-sm"
                             disabled={isSubmitting}
                         >
                             {isSubmitting ? (
                                 <>
-                                    <Loader2 className="animate-spin mr-2 h-5 w-5" />
-                                    <span>{submissionStatus || 'Saving...'}</span>
+                                    <Loader2 className="animate-spin mr-2 h-4 w-4" />
+                                    <span>Saving...</span>
                                 </>
                             ) : (
-                                <span>{editingQuiz ? 'Save Changes' : 'Create Quiz'}</span>
+                                <span>{editingQuiz ? 'Update Quiz' : 'Create Quiz'}</span>
                             )}
                         </button>
                     </div>
