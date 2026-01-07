@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../services/supabase';
 import LoadingScreen from '../../components/LoadingScreen';
-import { ArrowRight, CheckCircle, XCircle, RefreshCw, Layers, ClipboardList } from 'lucide-react';
+import { ArrowRight, CheckCircle, XCircle, RefreshCw, Layers, ClipboardList, Loader2 } from 'lucide-react';
 
 const ModeToggle = ({ viewMode, setViewMode }) => (
     <div className="flex bg-black/30 p-0.5 rounded-lg border border-brand-border/20 w-fit mx-auto md:mx-0">
