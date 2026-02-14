@@ -40,6 +40,7 @@ const QuizHeader = ({ progress, viewMode, setViewMode }) => (
 );
 
 const QuestionItem = ({ q, index, total, answers, handleAnswer, isSinglePage, submitting, handleNext }) => {
+    if (!q) return null;
     const currentAnswer = answers[q.id] || '';
     return (
         <div className="bg-black/20 border border-brand-border p-5 md:p-10 rounded-2xl shadow-card w-full flex flex-col backdrop-blur-md animate-fade-in-up">
@@ -80,22 +81,45 @@ const QuestionItem = ({ q, index, total, answers, handleAnswer, isSinglePage, su
                             );
                         })}
                     </div>
-                ) : ['multiple_choice', 'true_false'].includes(q.type) ? (
-                    (q.options && q.options.length > 0 ? q.options : (q.type === 'true_false' ? ['صواب', 'خطأ'] : [])).map((option, idx) => (
-                        <button
-                            key={idx}
-                            onClick={() => handleAnswer(q.id, option)}
-                            className={`w-full text-left p-4 rounded-xl border transition-all duration-200 flex items-center justify-between text-base
-                                ${currentAnswer === option
-                                    ? 'bg-brand-primary/10 border-brand-primary text-white font-bold'
-                                    : 'bg-black/20 border-brand-border/20 text-brand-secondary hover:bg-white/5'
+                ) : ['multiple_choice', 'multiple_answer', 'true_false'].includes(q.type) ? (
+                    (q.options && q.options.length > 0 ? q.options : (q.type === 'true_false' ? ['True', 'False'] : [])).map((option, idx) => {
+                        const isMultiple = q.type === 'multiple_answer';
+                        const currentAnswers = isMultiple
+                            ? (currentAnswer || '').split(',').map(s => s.trim()).filter(Boolean)
+                            : [currentAnswer];
+
+                        const isSelected = currentAnswers.includes(option);
+
+                        const toggleAnswer = () => {
+                            if (!isMultiple) {
+                                handleAnswer(q.id, option);
+                            } else {
+                                let newAnswers;
+                                if (isSelected) {
+                                    newAnswers = currentAnswers.filter(a => a !== option);
+                                } else {
+                                    newAnswers = [...currentAnswers, option];
                                 }
-                            `}
-                        >
-                            <span>{option}</span>
-                            {currentAnswer === option && <CheckCircle className="text-brand-primary" size={20} />}
-                        </button>
-                    ))
+                                handleAnswer(q.id, newAnswers.join(', '));
+                            }
+                        };
+
+                        return (
+                            <button
+                                key={idx}
+                                onClick={toggleAnswer}
+                                className={`w-full text-left p-4 rounded-xl border transition-all duration-200 flex items-center justify-between text-base
+                                    ${isSelected
+                                        ? 'bg-brand-primary/10 border-brand-primary text-white font-bold'
+                                        : 'bg-black/20 border-brand-border/20 text-brand-secondary hover:bg-white/5'
+                                    }
+                                `}
+                            >
+                                <span>{option}</span>
+                                {isSelected && <CheckCircle className="text-brand-primary" size={20} />}
+                            </button>
+                        );
+                    })
                 ) : (
                     <input
                         type="text"
@@ -215,6 +239,13 @@ const QuizRunner = () => {
                     if (isAllCorrect && Object.keys(expectedMatches).length > 0) {
                         calculatedScore++;
                     }
+                } else if (q.type === 'multiple_answer') {
+                    const userAnswers = (userVal || '').split(',').map(s => s.trim()).filter(Boolean).sort();
+                    const correctAnswers = (correctVal || '').split(',').map(s => s.trim()).filter(Boolean).sort();
+
+                    if (userAnswers.length > 0 && userAnswers.length === correctAnswers.length && userAnswers.every((val, index) => val === correctAnswers[index])) {
+                        calculatedScore++;
+                    }
                 } else if (userVal === correctVal) {
                     calculatedScore++;
                 }
@@ -269,6 +300,26 @@ const QuizRunner = () => {
     }
 
     if (step === 'quiz') {
+        if (questions.length === 0) {
+            return (
+                <div className="min-h-screen flex flex-col items-center justify-center p-4">
+                    <div className="bg-black/20 border border-brand-border p-10 rounded-2xl shadow-card text-center backdrop-blur-md max-w-md w-full">
+                        <div className="bg-orange-500/10 text-orange-400 p-4 rounded-xl border border-orange-500/20 mb-6">
+                            <ClipboardList className="mx-auto mb-2" size={32} />
+                            <p className="font-bold">No questions available</p>
+                            <p className="text-xs opacity-70 mt-1">This quiz doesn't have any questions yet. Please check back later.</p>
+                        </div>
+                        <button
+                            onClick={() => navigate('/')}
+                            className="bg-brand-primary text-brand-background font-black py-3 px-10 rounded-xl hover:opacity-90 transition-all text-sm uppercase tracking-widest shadow-glow-sm"
+                        >
+                            Return Home
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
         const progress = viewMode === 'single'
             ? (Object.keys(answers).length / questions.length) * 100
             : ((currentQuestionIndex + 1) / questions.length) * 100;
@@ -332,7 +383,17 @@ const QuizRunner = () => {
                             <div className="text-6xl font-black text-brand-primary mb-2 leading-none">{score} <span className="text-3xl opacity-10">/ {questions.length}</span></div>
                             <div className="text-brand-secondary font-bold tracking-widest text-sm opacity-60 mt-4">{percentage}% Correct</div>
                         </div>
-                        <button onClick={() => navigate('/')} className="inline-flex items-center gap-3 bg-brand-primary text-brand-background font-black py-4 px-12 rounded-xl text-sm uppercase tracking-[0.2em] hover:opacity-90 transition-all"><RefreshCw size={16} /> Home</button>
+                        <div className="flex gap-4 justify-center">
+                            <button onClick={() => {
+                                // Retake with same name
+                                setAnswers({});
+                                setCurrentQuestionIndex(0);
+                                setScore(null);
+                                setStep('quiz');
+                                window.scrollTo({ top: 0, behavior: 'instant' });
+                            }} className="inline-flex items-center gap-3 bg-brand-primary/80 text-brand-background font-black py-4 px-6 rounded-xl text-sm uppercase tracking-[0.2em] hover:opacity-90 transition-all"><RefreshCw size={16} /> Practice Again</button>
+                            <button onClick={() => navigate('/')} className="inline-flex items-center gap-3 bg-brand-primary text-brand-background font-black py-4 px-12 rounded-xl text-sm uppercase tracking-[0.2em] hover:opacity-90 transition-all"><RefreshCw size={16} /> Home</button>
+                        </div>
                     </div>
 
                     <div className="space-y-6">
@@ -349,6 +410,10 @@ const QuizRunner = () => {
                                 });
                                 const userMatches = typeof userAnswer === 'object' ? userAnswer : {};
                                 isCorrect = Object.keys(expected).length > 0 && Object.keys(expected).every(p => userMatches[p] === expected[p]);
+                            } else if (q.type === 'multiple_answer') {
+                                const userAnswers = (userAnswer || '').split(',').map(s => s.trim()).filter(Boolean).sort();
+                                const correctAnswers = (q.correct_answer || '').split(',').map(s => s.trim()).filter(Boolean).sort();
+                                isCorrect = userAnswers.length > 0 && userAnswers.length === correctAnswers.length && userAnswers.every((val, idx) => val === correctAnswers[idx]);
                             }
 
                             return (

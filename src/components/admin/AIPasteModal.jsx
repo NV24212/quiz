@@ -24,12 +24,37 @@ const AIPasteModal = ({ isOpen, onClose, onImport }) => {
     };
 
     const handleConfirmImport = () => {
-        const finalizedData = parsedData.map(q => {
-            if (q.type === 'true_false' && (!q.options || q.options.length === 0)) {
-                return { ...q, options: ['صواب', 'خطأ'] };
+        const finalizedData = (parsedData || []).map(q => {
+            const copy = { ...q };
+
+            // Normalize options for true/false and default correct answer
+            if (copy.type === 'true_false') {
+                if (!copy.options || copy.options.length === 0) copy.options = ['True', 'False'];
+                if (!copy.correct_answer) copy.correct_answer = copy.options[0] || 'True';
             }
-            return q;
+
+            // For multiple choice, ensure a correct answer exists (choose first option as fallback)
+            if (copy.type === 'multiple_choice') {
+                if (copy.options && copy.options.length > 0 && !copy.correct_answer) {
+                    copy.correct_answer = copy.options[0];
+                }
+            }
+
+            // For matching, derive a summary correct_answer if missing
+            if (copy.type === 'matching') {
+                if (copy.options && copy.options.length > 0) {
+                    const expected = {};
+                    copy.options.forEach(opt => {
+                        const [prompt, ans] = opt.includes(':') ? opt.split(':') : [opt, ''];
+                        expected[(prompt || '').trim()] = (ans || '').trim();
+                    });
+                    if (!copy.correct_answer) copy.correct_answer = `${Object.keys(expected).length} matches`;
+                }
+            }
+
+            return copy;
         });
+
         onImport(finalizedData);
         handleClose();
     };
@@ -114,7 +139,7 @@ const AIPasteModal = ({ isOpen, onClose, onImport }) => {
 
                                 {['multiple_choice', 'true_false'].includes(q.type) && (
                                     <div className="grid grid-cols-2 gap-2">
-                                        {(q.options && q.options.length > 0 ? q.options : (q.type === 'true_false' ? ['صواب', 'خطأ'] : [])).map((opt, i) => (
+                                        {(q.options && q.options.length > 0 ? q.options : (q.type === 'true_false' ? ['True', 'False'] : [])).map((opt, i) => (
                                             <div key={i} className={`text-[11px] p-2 rounded-lg border ${q.correct_answer === opt ? 'border-green-500/30 bg-green-500/10 text-green-300' : 'border-white/5 bg-white/5 opacity-60'}`}>
                                                 {opt}
                                             </div>

@@ -39,6 +39,7 @@ const QuizManagement = () => {
 
     const questionTypeOptions = [
         { value: 'multiple_choice', label: 'Multiple Choice' },
+        { value: 'multiple_answer', label: 'Multiple Answer' },
         { value: 'true_false', label: 'True / False' },
         { value: 'matching', label: 'Matching (Connect)' },
         { value: 'text', label: 'Text Input' }
@@ -149,7 +150,7 @@ const QuizManagement = () => {
         updatedQuestions[index][field] = value;
 
         if (field === 'type' && value === 'true_false') {
-            updatedQuestions[index].options = ['صواب', 'خطأ'];
+            updatedQuestions[index].options = ['True', 'False'];
         }
 
         setFormData({ ...formData, questions: updatedQuestions });
@@ -185,6 +186,8 @@ const QuizManagement = () => {
 
     const handleFormSubmit = async (e) => {
         e.preventDefault();
+        // Prevent double submissions if already submitting
+        if (isSubmitting) return;
         setIsSubmitting(true);
         setSubmissionStatus('Saving Quiz...');
 
@@ -221,17 +224,30 @@ const QuizManagement = () => {
                 if (deleteError) throw deleteError;
             }
 
+            // Prepare questions: remove empty texts and deduplicate by text+type
+            const cleanedQuestions = (formData.questions || [])
+                .filter(q => q && (q.text || '').toString().trim().length > 0)
+                .map((q, index) => ({ ...q, __originalIndex: index }));
+
+            const seen = new Set();
             const questionsToInsert = [];
             const questionsToUpdate = [];
 
-            formData.questions.forEach((q, index) => {
+            cleanedQuestions.forEach((q, idx) => {
+                const key = `${(q.text || '').trim()}::${q.type}`;
+                if (seen.has(key) && !q.id) {
+                    // Skip inserting exact-duplicate new questions
+                    return;
+                }
+                seen.add(key);
+
                 const item = {
                     quiz_id: quizId,
                     text: q.text,
                     type: q.type,
-                    options: q.type === 'multiple_choice' ? q.options : null,
+                    options: ['multiple_choice', 'multiple_answer', 'matching', 'true_false'].includes(q.type) ? q.options : null,
                     correct_answer: q.correct_answer,
-                    order: index
+                    order: idx
                 };
 
                 if (q.id) {
@@ -334,16 +350,6 @@ const QuizManagement = () => {
                 isOpen={isModalOpen}
                 onClose={closeModal}
                 title={editingQuiz ? 'Edit Quiz' : 'Create New Quiz'}
-                headerActions={
-                    <button
-                        type="button"
-                        onClick={handleFormSubmit}
-                        className="bg-brand-primary text-brand-background px-4 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wider hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-2"
-                        disabled={isSubmitting}
-                    >
-                        {isSubmitting ? <Loader2 className="animate-spin h-3 w-3" /> : (editingQuiz ? 'Save' : 'Create')}
-                    </button>
-                }
             >
                 <form onSubmit={handleFormSubmit} className="space-y-6">
                     <div ref={topRef}></div>
@@ -411,13 +417,7 @@ const QuizManagement = () => {
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6 bg-brand-background/50 backdrop-blur-sm p-4 rounded-xl border border-brand-border/30">
                             <h3 className="text-xl font-bold text-brand-primary">Questions</h3>
                             <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-                                <button
-                                    type="button"
-                                    onClick={scrollToTop}
-                                    className="flex-1 sm:flex-none text-[10px] bg-brand-border/10 hover:bg-brand-border/20 text-brand-secondary py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-colors font-bold uppercase tracking-wider"
-                                >
-                                    <ArrowUp size={12} /> Top
-                                </button>
+                                {/* Top button removed per UX request */}
                                 <button
                                     type="button"
                                     onClick={() => setIsAIModalOpen(true)}
@@ -492,7 +492,7 @@ const QuizManagement = () => {
                                             <div className="bg-black/10 p-4 rounded-xl border border-brand-border/30">
                                                 <label className="block text-xs font-bold text-brand-secondary uppercase mb-3 text-[10px]">Select Correct Answer</label>
                                                 <div className="flex gap-2">
-                                                    {['صواب', 'خطأ'].map((opt, i) => (
+                                                    {['True', 'False'].map((opt, i) => (
                                                         <button
                                                             key={i}
                                                             type="button"
@@ -562,45 +562,76 @@ const QuizManagement = () => {
                                                 </div>
                                             </div>
                                         )}
-                                        {q.type === 'multiple_choice' && (
+                                        {(q.type === 'multiple_choice' || q.type === 'multiple_answer') && (
                                             <div className="bg-black/10 p-4 rounded-xl border border-brand-border/30">
-                                                <label className="block text-xs font-bold text-brand-secondary uppercase mb-3 text-[10px]">Options (Select the correct one)</label>
+                                                <label className="block text-xs font-bold text-brand-secondary uppercase mb-3 text-[10px]">
+                                                    {q.type === 'multiple_answer' ? 'Options (Select all that apply)' : 'Options (Select the correct one)'}
+                                                </label>
                                                 <div className="space-y-2">
-                                                    {(q.options || []).map((opt, oIndex) => (
-                                                        <div key={oIndex} className="flex gap-2 items-center">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => updateQuestion(qIndex, 'correct_answer', opt)}
-                                                                className={`p-2 rounded-lg border transition-all ${q.correct_answer === opt
-                                                                    ? 'bg-brand-primary text-brand-background border-brand-primary'
-                                                                    : 'bg-black/30 border-brand-border/50 text-brand-secondary hover:border-brand-primary/50'
-                                                                    }`}
-                                                            >
-                                                                <Check size={14} />
-                                                            </button>
-                                                            <input
-                                                                type="text"
-                                                                value={opt}
-                                                                onChange={(e) => {
-                                                                    const oldVal = opt;
-                                                                    const newVal = e.target.value;
-                                                                    updateOption(qIndex, oIndex, newVal);
-                                                                    if (q.correct_answer === oldVal) {
-                                                                        updateQuestion(qIndex, 'correct_answer', newVal);
-                                                                    }
-                                                                }}
-                                                                required
-                                                                className={`flex-1 bg-black/30 border p-2.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-primary/50 text-sm ${q.correct_answer === opt ? 'border-brand-primary/50 text-brand-primary font-bold' : 'border-brand-border text-brand-primary'
-                                                                    }`}
-                                                                placeholder={`Option ${oIndex + 1}`}
-                                                            />
-                                                            {q.options.length > 2 && (
-                                                                <button type="button" onClick={() => removeOption(qIndex, oIndex)} className="text-brand-secondary hover:text-red-500">
-                                                                    <X size={16} />
+                                                    {(q.options || []).map((opt, oIndex) => {
+                                                        const correctAnswers = q.type === 'multiple_answer'
+                                                            ? (q.correct_answer || '').split(',').map(s => s.trim()).filter(Boolean)
+                                                            : [q.correct_answer];
+
+                                                        const isCorrect = correctAnswers.includes(opt);
+
+                                                        const toggleCorrect = () => {
+                                                            if (q.type === 'multiple_choice') {
+                                                                updateQuestion(qIndex, 'correct_answer', opt);
+                                                            } else {
+                                                                let newCorrect;
+                                                                if (isCorrect) {
+                                                                    newCorrect = correctAnswers.filter(a => a !== opt).join(', ');
+                                                                } else {
+                                                                    newCorrect = [...correctAnswers, opt].join(', ');
+                                                                }
+                                                                updateQuestion(qIndex, 'correct_answer', newCorrect);
+                                                            }
+                                                        };
+
+                                                        return (
+                                                            <div key={oIndex} className="flex gap-2 items-center">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={toggleCorrect}
+                                                                    className={`p-2 rounded-lg border transition-all ${isCorrect
+                                                                        ? 'bg-brand-primary text-brand-background border-brand-primary'
+                                                                        : 'bg-black/30 border-brand-border/50 text-brand-secondary hover:border-brand-primary/50'
+                                                                        }`}
+                                                                >
+                                                                    <Check size={14} />
                                                                 </button>
-                                                            )}
-                                                        </div>
-                                                    ))}
+                                                                <input
+                                                                    type="text"
+                                                                    value={opt}
+                                                                    onChange={(e) => {
+                                                                        const oldVal = opt;
+                                                                        const newVal = e.target.value;
+                                                                        updateOption(qIndex, oIndex, newVal);
+
+                                                                        // Update correct answer if this option was selected
+                                                                        if (q.type === 'multiple_choice') {
+                                                                            if (q.correct_answer === oldVal) {
+                                                                                updateQuestion(qIndex, 'correct_answer', newVal);
+                                                                            }
+                                                                        } else {
+                                                                            const updatedCorrect = correctAnswers.map(a => a === oldVal ? newVal : a).join(', ');
+                                                                            updateQuestion(qIndex, 'correct_answer', updatedCorrect);
+                                                                        }
+                                                                    }}
+                                                                    required
+                                                                    className={`flex-1 bg-black/30 border p-2.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-primary/50 text-sm ${isCorrect ? 'border-brand-primary/50 text-brand-primary font-bold' : 'border-brand-border text-brand-primary'
+                                                                        }`}
+                                                                    placeholder={`Option ${oIndex + 1}`}
+                                                                />
+                                                                {q.options.length > 2 && (
+                                                                    <button type="button" onClick={() => removeOption(qIndex, oIndex)} className="text-brand-secondary hover:text-red-500">
+                                                                        <X size={16} />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
                                                     <button
                                                         type="button"
                                                         onClick={() => addOption(qIndex)}

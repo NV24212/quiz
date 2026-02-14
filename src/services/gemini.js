@@ -2,23 +2,35 @@ export const parseQuestionsWithAI = async (rawText) => {
   const workerUrl = 'https://ai.azhar.store';
 
   const prompt = `
-Analyze the following raw text from a quiz and extract all questions.
+Analyze the following raw text from a quiz and extract all questions. 
 
 CRITICAL RULES:
-1. For True/False questions, use the type "true_false" and options ["صواب", "خطأ"].
-2. IF THE CORRECT ANSWER IS NOT EXPLICITLY PROVIDED IN THE TEXT, YOU MUST SOLVE THE QUESTION YOURSELF AND PROVIDE THE CORRECT ANSWER based on your knowledge.
-3. For "text" type questions, provide the most likely correct short answer or keyword.
-4. For "matching" type questions:
-   - The "text" should be the overall instruction (e.g. "Match the following").
-   - The "options" should be an array of strings in the format "Prompt:CorrectAnswer".
-   - The "correct_answer" should be a summary of the count (e.g. "6 matches").
-5. REMOVE ABSOLUTE DUPLICATED QUESTIONS. If the text has the same question multiple times, extract it only once.
-6. Preserve the language (Arabic/English).
-7. Return ONLY valid JSON in this format:
+1. QUESTION TYPES:
+   - "multiple_choice": Single correct answer from options.
+   - "multiple_answer": TWO OR MORE correct answers from options. If a question says "Select all that apply" or has multiple correct marks, use this type.
+   - "true_false": Use options ["True", "False"].
+   - "matching": 
+     - "text" is the instruction.
+     - "options" is an array of "Prompt:CorrectAnswer" strings.
+     - "correct_answer" is a summary like "X matches".
+   - "text": Short answer/keyword.
+
+2. CORRECT ANSWERS:
+   - IF THE CORRECT ANSWER IS NOT EXPLICITLY PROVIDED, YOU MUST SOLVE THE QUESTION BASED ON YOUR KNOWLEDGE.
+   - For "multiple_answer", provide ALL correct answers separated by a comma (e.g., "Paris, Lyon").
+   - For "multiple_choice", provide exactly one correct option.
+
+3. CONTEXT & QUALITY:
+   - Identify the language and maintain it (Arabic/English).
+   - Clean up noise (headers, footers, page numbers).
+   - REMOVE ABSOLUTE DUPLICATED QUESTIONS.
+   - If the text is ambiguous, use your best judgment to determine the most likely question structure.
+
+4. Return ONLY valid JSON in this format:
 [
   {
     "text": "question text",
-    "type": "multiple_choice|text|true_false|matching",
+    "type": "multiple_choice|multiple_answer|text|true_false|matching",
     "options": ["option1", "option2"],
     "correct_answer": "correct answer"
   }
@@ -43,15 +55,15 @@ ${rawText}
     }
 
     const data = await response.json();
-    
+
     // If the worker returns {questions: [...]}
     if (data.questions) {
       return data.questions;
     }
-    
+
     // If it returns the array directly
     return data;
-    
+
   } catch (error) {
     console.error("AI Parsing Error Details:", error);
 

@@ -252,6 +252,10 @@ const ResponseList = () => {
                                     });
                                     const userMatches = typeof userAnswer === 'object' ? userAnswer : {};
                                     isCorrect = Object.keys(expected).length > 0 && Object.keys(expected).every(p => userMatches[p] === expected[p]);
+                                } else if (q.type === 'multiple_answer') {
+                                    const userAnswers = (userAnswer || '').split(',').map(s => s.trim()).filter(Boolean).sort();
+                                    const correctAnswers = (q.correct_answer || '').split(',').map(s => s.trim()).filter(Boolean).sort();
+                                    isCorrect = userAnswers.length > 0 && userAnswers.length === correctAnswers.length && userAnswers.every((val, idx) => val === correctAnswers[idx]);
                                 }
 
                                 return (
