@@ -1,5 +1,5 @@
 export const parseQuestionsWithAI = async (rawText) => {
-  const workerUrl = 'https://quiz-ai-worker.m33320022.workers.dev/';
+  const workerUrl = 'https://ai.hasanmahmood.org';
 
   const prompt = `
 Analyze the following raw text from a quiz and extract all questions. 
