@@ -82,13 +82,14 @@ const Home = () => {
                             onClick={() => navigate(`/quiz/${quiz.slug || quiz.id}`)}
                             className="bg-black/10 border border-brand-border/30 p-4 rounded-xl hover:bg-black/20 transition-all duration-200 cursor-pointer flex flex-col hover:border-brand-primary/40 group"
                         >
-                            <h2 className="text-sm font-bold text-white mb-1 truncate group-hover:text-brand-primary transition-colors">{quiz.title}</h2>
-                            <p className="mb-4 text-brand-secondary text-[11px] line-clamp-2 opacity-60 leading-tight">
-                                {quiz.description || "Start testing your knowledge."}
-                            </p>
+                            <h2 dir="auto" className="text-sm font-bold text-white mb-1 truncate group-hover:text-brand-primary transition-colors">{quiz.title}</h2>
+                            {quiz.description && (
+                                <p dir="auto" className="mb-4 text-brand-secondary text-[11px] line-clamp-2 opacity-60 leading-tight">
+                                    {quiz.description}
+                                </p>
+                            )}
 
-                            <div className="mt-auto pt-2 border-t border-brand-border/10 flex items-center justify-between">
-                                <span className="text-[9px] font-black text-brand-secondary opacity-30 uppercase tracking-widest">QUIZ</span>
+                            <div className="mt-auto pt-2 border-t border-brand-border/10 flex items-center justify-end">
                                 <div className="text-brand-primary opacity-0 group-hover:opacity-100 transition-opacity">
                                     <Play size={12} fill="currentColor" />
                                 </div>
