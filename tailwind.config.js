@@ -4,7 +4,12 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
+        sans: ["Poppins", "sans-serif"],
+      },
+      fontWeight: {
+        bold: "600",
+        extrabold: "600",
+        black: "700",
       },
       colors: {
         brand: {
