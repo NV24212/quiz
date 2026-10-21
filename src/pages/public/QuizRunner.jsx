@@ -106,21 +106,21 @@ const QuestionItem = ({ q, index, total, answers, handleAnswer, submitting, hand
                             }
                         };
 
-                        let buttonStyles = "bg-black/20 border-brand-border/20 text-brand-secondary hover:bg-white/5";
+                        let buttonStyles = "bg-black/20 border-brand-border/20 text-brand-secondary hover:bg-white/10 hover:border-brand-border/40 hover:text-white";
 
                         if (isPractice) {
                             if (isSelected) {
                                 if (isOptionCorrect) {
-                                    buttonStyles = "bg-green-500/20 border-green-500 text-green-300 font-bold";
+                                    buttonStyles = "bg-green-500/20 border-green-500 text-green-300 font-bold hover:bg-green-500/30";
                                 } else {
-                                    buttonStyles = "bg-red-500/20 border-red-500 text-red-300 font-bold";
+                                    buttonStyles = "bg-red-500/20 border-red-500 text-red-300 font-bold hover:bg-red-500/30";
                                 }
                             } else if (isOptionCorrect && Boolean(currentAnswer)) {
-                                buttonStyles = "bg-green-500/10 border-green-500/50 text-green-400 font-bold";
+                                buttonStyles = "bg-green-500/10 border-green-500/50 text-green-400 font-bold hover:bg-green-500/20";
                             }
                         } else {
                             if (isSelected) {
-                                buttonStyles = "bg-brand-primary/10 border-brand-primary text-white font-bold";
+                                buttonStyles = "bg-brand-primary/10 border-brand-primary text-white font-bold hover:bg-brand-primary/20";
                             }
                         }
 
@@ -128,7 +128,7 @@ const QuestionItem = ({ q, index, total, answers, handleAnswer, submitting, hand
                             <button
                                 key={idx}
                                 onClick={toggleAnswer}
-                                className={`w-full text-left p-4 rounded-xl border transition-all duration-200 flex items-center justify-between text-base ${buttonStyles}`}
+                                className={`w-full text-left p-4 rounded-xl border transition-all duration-300 ease-in-out transform active:scale-[0.99] flex items-center justify-between text-base ${buttonStyles}`}
                             >
                                 <span dir="auto">{option}</span>
                                 {isPractice ? (
