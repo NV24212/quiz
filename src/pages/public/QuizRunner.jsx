@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../services/supabase';
 import LoadingScreen from '../../components/LoadingScreen';
-import { ArrowRight, CheckCircle, XCircle, RefreshCw, ClipboardList, Loader2, BookOpen, Award } from 'lucide-react';
+import { ArrowRight, CheckCircle, XCircle, RefreshCw, ClipboardList, Loader2, BookOpen, Award, Eye } from 'lucide-react';
 
 const QuizHeader = ({ progress }) => (
     <div className="w-full max-w-2xl flex flex-col items-center gap-4 mb-8">
@@ -232,7 +232,11 @@ const QuizRunner = () => {
 
     const handleStart = (e) => {
         e.preventDefault();
-        if (name.trim()) setStep('quiz');
+        if (mode === 'view') {
+            setStep('view');
+        } else if (name.trim()) {
+            setStep('quiz');
+        }
     };
 
     const handleAnswer = (questionId, answer) => {
@@ -317,47 +321,170 @@ const QuizRunner = () => {
                 <div className="bg-black/20 border border-brand-border p-6 rounded-xl shadow-card max-w-xs w-full backdrop-blur-md animate-fade-in-up">
                     <form onSubmit={handleStart} className="space-y-4">
                         <div>
-                            <label className="block text-[9px] font-black text-brand-secondary mb-2 uppercase tracking-[0.2em] text-center opacity-40">NV</label>
+                            <label className="block text-[9px] font-black text-brand-secondary mb-2 uppercase tracking-[0.2em] text-center opacity-40">
+                                {mode === 'view' ? 'NV (Optional)' : 'NV'}
+                            </label>
                             <input
                                 type="text"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
-                                required
+                                required={mode !== 'view'}
                                 className="w-full bg-black/30 border border-brand-border text-brand-primary p-2 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-primary/50 text-center text-sm font-bold"
-                                placeholder=""
+                                placeholder={mode === 'view' ? '(Optional)' : ''}
                             />
                         </div>
 
                         <div>
                             <label className="block text-[9px] font-black text-brand-secondary mb-2 uppercase tracking-[0.2em] text-center opacity-40">Mode</label>
-                            <div className="grid grid-cols-2 gap-2">
+                            <div className="grid grid-cols-3 gap-1.5">
                                 <button
                                     type="button"
                                     onClick={() => setMode('exam')}
-                                    className={`flex items-center justify-center gap-1.5 p-2 rounded-lg border text-xs font-bold transition-all ${
+                                    className={`flex items-center justify-center gap-1 p-2 rounded-lg border text-[11px] font-bold transition-all ${
                                         mode === 'exam'
                                             ? 'bg-brand-primary text-brand-background border-brand-primary'
                                             : 'bg-black/20 border-brand-border/30 text-brand-secondary hover:text-white'
                                     }`}
                                 >
-                                    <Award size={14} /> Exam
+                                    <Award size={13} /> Exam
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setMode('practice')}
-                                    className={`flex items-center justify-center gap-1.5 p-2 rounded-lg border text-xs font-bold transition-all ${
+                                    className={`flex items-center justify-center gap-1 p-2 rounded-lg border text-[11px] font-bold transition-all ${
                                         mode === 'practice'
                                             ? 'bg-brand-primary text-brand-background border-brand-primary'
                                             : 'bg-black/20 border-brand-border/30 text-brand-secondary hover:text-white'
                                     }`}
                                 >
-                                    <BookOpen size={14} /> Practice
+                                    <BookOpen size={13} /> Practice
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setMode('view')}
+                                    className={`flex items-center justify-center gap-1 p-2 rounded-lg border text-[11px] font-bold transition-all ${
+                                        mode === 'view'
+                                            ? 'bg-brand-primary text-brand-background border-brand-primary'
+                                            : 'bg-black/20 border-brand-border/30 text-brand-secondary hover:text-white'
+                                    }`}
+                                >
+                                    <Eye size={13} /> View
                                 </button>
                             </div>
                         </div>
 
-                        <button type="submit" className="w-full bg-brand-primary text-brand-background font-black text-xs py-2.5 rounded-lg hover:opacity-90 mt-2">Start</button>
+                        <button type="submit" className="w-full bg-brand-primary text-brand-background font-black text-xs py-2.5 rounded-lg hover:opacity-90 mt-2">
+                            {mode === 'view' ? 'View Answers' : 'Start'}
+                        </button>
                     </form>
+                </div>
+            </div>
+        );
+    }
+
+    if (step === 'view') {
+        return (
+            <div className="min-h-screen py-10 px-4 flex flex-col items-center">
+                <div className="w-full max-w-2xl space-y-6 animate-fade-in-up">
+                    <div className="bg-black/20 border border-brand-border p-6 md:p-8 rounded-2xl shadow-card backdrop-blur-md flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div>
+                            <span className="text-amber-400 text-[10px] font-bold uppercase tracking-wider bg-amber-400/10 px-3 py-1 rounded-full">
+                                Study / View Mode
+                            </span>
+                            <h1 dir="auto" className="text-xl md:text-2xl font-bold text-white mt-2">{quiz.title}</h1>
+                            <p className="text-xs text-brand-secondary opacity-60 mt-1">{questions.length} Questions with Correct Answers</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setStep('intro')}
+                                className="bg-brand-primary text-brand-background font-black py-2.5 px-6 rounded-xl hover:opacity-90 transition-all text-xs uppercase tracking-widest shrink-0"
+                            >
+                                Back
+                            </button>
+                            <button
+                                onClick={() => navigate('/')}
+                                className="bg-black/30 border border-brand-border text-brand-secondary hover:text-white font-bold py-2.5 px-6 rounded-xl hover:bg-black/40 transition-all text-xs uppercase tracking-widest shrink-0"
+                            >
+                                Home
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="space-y-6">
+                        {questions.length === 0 ? (
+                            <div className="bg-black/20 border border-brand-border p-8 rounded-2xl text-center text-brand-secondary">
+                                No questions found for this quiz.
+                            </div>
+                        ) : (
+                            questions.map((q, idx) => {
+                                const isMultiple = q.type === 'multiple_answer';
+                                const correctAnswersList = isMultiple
+                                    ? (q.correct_answer || '').split(',').map(s => s.trim()).filter(Boolean)
+                                    : [q.correct_answer];
+
+                                return (
+                                    <div key={idx} className="bg-black/20 border border-brand-border p-6 md:p-8 rounded-2xl backdrop-blur-md shadow-card">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <span className="text-brand-secondary text-[10px] font-black uppercase tracking-[0.2em] opacity-40">
+                                                Question {idx + 1} / {questions.length}
+                                            </span>
+                                            <span className="text-[10px] font-bold text-brand-primary bg-brand-primary/10 px-3 py-1 rounded-full uppercase tracking-wider">
+                                                {q.type.replace('_', ' ')}
+                                            </span>
+                                        </div>
+
+                                        <h3 dir="auto" className="text-lg md:text-xl font-bold text-white mb-6 leading-tight">{q.text}</h3>
+
+                                        {q.type === 'matching' ? (
+                                            <div className="space-y-2 bg-black/30 p-4 rounded-xl border border-white/5">
+                                                {(q.options || []).map((opt, i) => {
+                                                    const [prompt, correctAnswer] = opt.includes(':') ? opt.split(':') : [opt, ''];
+                                                    return (
+                                                        <div key={i} className="flex justify-between items-center text-xs md:text-sm border-b border-white/5 pb-2.5 last:border-0 last:pb-0">
+                                                            <span dir="auto" className="text-brand-secondary font-medium">{prompt}</span>
+                                                            <span dir="auto" className="text-green-400 font-bold flex items-center gap-1.5 bg-green-500/10 px-3 py-1 rounded-lg border border-green-500/20">
+                                                                <CheckCircle size={14} /> {correctAnswer || '---'}
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        ) : ['multiple_choice', 'multiple_answer', 'true_false'].includes(q.type) ? (
+                                            <div className="space-y-2.5">
+                                                {(q.options && q.options.length > 0 ? q.options : (q.type === 'true_false' ? ['True', 'False'] : [])).map((option, optIdx) => {
+                                                    const isCorrectOption = correctAnswersList.includes(option);
+                                                    return (
+                                                        <div
+                                                            key={optIdx}
+                                                            className={`p-4 rounded-xl border flex items-center justify-between text-sm md:text-base font-medium ${
+                                                                isCorrectOption
+                                                                    ? 'bg-green-500/15 border-green-500 text-green-300 font-bold'
+                                                                    : 'bg-black/20 border-brand-border/20 text-brand-secondary/70'
+                                                            }`}
+                                                        >
+                                                            <span dir="auto">{option}</span>
+                                                            {isCorrectOption && (
+                                                                <span className="flex items-center gap-1.5 text-xs text-green-400 font-bold uppercase tracking-wider shrink-0 ml-2">
+                                                                    <CheckCircle size={18} /> Correct
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        ) : (
+                                            <div className="p-4 bg-green-500/10 rounded-xl border border-green-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                                <span className="text-brand-secondary text-xs font-bold uppercase tracking-wider">Correct Answer:</span>
+                                                <span dir="auto" className="text-green-400 font-bold text-base md:text-lg flex items-center gap-2">
+                                                    <CheckCircle size={18} /> {q.correct_answer}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
                 </div>
             </div>
         );
